@@ -173,7 +173,7 @@ class SocksConn
     raddr = client.addr[3].split(".").map {|x| x.to_i}
     reply 0x00, 0x01, raddr, assoc.addr[1]
 
-    debug("Associated: %s:%s <=> %s:%s" % [addr_str,assoc_port,assoc.addr[3],assoc.addr[1]])
+    debug("Associated: %s:%s <=> %s:%s <=> %s:%s" % [addr_str,assoc_port,assoc.addr[3],assoc.addr[1],bcon.addr[3], bcon.addr[1]])
     # relay datagrams
     debug assoc.addr.inspect
     loop do
