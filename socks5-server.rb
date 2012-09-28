@@ -285,7 +285,7 @@ class Socks5
     bcon.bind("0.0.0.0", 0)
 
     # construct reply
-    debug "Reply ASSOCIATE #{ratyp} #{addr_str raddr}"
+    debug "Reply ASSOCIATE #{ratyp} #{addr_str raddr, ratyp}"
     reply RSP_SUCCESS, CMD_ASSOCIATE, ratyp, raddr, assoc.addr[1]
 
     debug("Associated: %s:%s <=> %s:%s <=> %s:%s" %
@@ -294,6 +294,7 @@ class Socks5
     # relay datagrams
     loop do
       if list = IO.select([assoc,bcon,client], nil, nil, 1)
+        debug "selected #{list[0].inspect}"
         list[0].each do |s|
           msg, snd_addr = s.recvfrom(1500) unless s == client
           debug "Recvfrom #{snd_addr.inspect}" if snd_addr
@@ -306,7 +307,8 @@ class Socks5
               rsv, frag = sio.read(3).unpack("nC")
               atyp, addr = addr_unpack sio
               addr = addr_str addr, atyp
-              port = sio.read(2).unpack("n")
+              port = sio.read(2).unpack("n").first
+              debug "Sending from cleint to #{addr}:#{port}"
               bcon.send sio.read, 0, addr, port
             when bcon
               # create header
@@ -318,12 +320,13 @@ class Socks5
                 snd = [rsv,frag].pack("nC")
                 snd << addr_pack(addr, atyp, port)
                 snd << msg
-                assoc.send addr_str, assoc_port, snd
+                assoc.send snd, 0, addr_str, assoc_port
               else
                 debug "Not sending because association not complete"
               end
             when client
               data = client.recv 1024
+              debug data.unpack("C*").map {|x| x.to_s(16)}.join
               if client.eof
                 debug "got EOF on client stream, terminating association"
                 return
