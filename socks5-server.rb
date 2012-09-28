@@ -285,7 +285,7 @@ class Socks5
     bcon.bind("0.0.0.0", 0)
 
     # construct reply
-    debug "Reply ASSOCIATE #{ratyp} #{raddr}"
+    debug "Reply ASSOCIATE #{ratyp} #{addr_str raddr}"
     reply RSP_SUCCESS, CMD_ASSOCIATE, ratyp, raddr, assoc.addr[1]
 
     debug("Associated: %s:%s <=> %s:%s <=> %s:%s" %
