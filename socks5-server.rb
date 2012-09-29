@@ -247,20 +247,31 @@ class Socks5
     addr = con.addr
     bport = addr[1]
     baddr = addr[3]
-    reply RSP_SUCCESS, CMD_CONNECT, 0x01, addr_strtoip4(baddr), bport
+    reply RSP_SUCCESS, CMD_CONNECT, ADDR_IP4, addr_strtoip4(baddr), bport
 
-    threads = [[con,client],[client,con]].map do |src,dst|
-      Thread.new do
-        begin
-          IO.copy_stream(src,dst)
+    selfrom = [client, con]
+    while selfrom.length > 0
+      sel = IO.select(selfrom)
+      sel[0].each do |src|
+        dst = case s
+          when con
+            client
+          when client
+            con
+        end
+        debug "select on #{src.addr.inspect}"
+        data = src.recv(1024)
+        unless data == ""
+          dst.write data
+        else
+          debug "EOF on #{src.addr.inspect}"
           src.close_read
           dst.close_write
-        rescue
+          selfrom.delete src
         end
       end
     end
-    threads.each {|t| t.join}
-    debug "Connection done"
+    debug "CONNECT finished"
   end
   def bind atyp, addr, port
     # bind a server port to the client stream
