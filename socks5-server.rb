@@ -263,8 +263,79 @@ class Socks5
     debug "Connection done"
   end
   def bind atyp, addr, port
-    debug("BIND not implemented")
-    reply 0x07, CMD_BIND, atyp, addr, port
+    # bind a server port to the client stream
+    begin
+      con = TCPServer.new(0)
+    rescue Exception => e
+      puts e.class
+      req = CMD_CONNECT, atyp, addr, port
+      case e
+        when Errno::ENETUNREACH
+          reply RSP_NETUNREACH, *req
+        when Errno::EHOSTUNREACH
+          reply RSP_HOSTUNREACH, *req
+        when Errno::ECONNREFUSED
+          reply RSP_CONNREFUSED, *req
+        else
+          debug e.backtrace
+          reply RSP_FAIL, *req
+      end
+      return
+    end
+    addr = con.addr
+    bport = addr[1]
+    reply RSP_SUCCESS, CMD_BIND, ADDR_DOMAIN, Socket.gethostname, bport
+
+    # wait for a connection
+    accept = nil
+    until accept
+      if s = IO.select([con,client])
+        s[0].each do |x|
+          case x
+            when client
+              # maybe client is closing BIND before connect?
+              debug "got data from client before bind connect"
+              client.recv(1024)
+              if client.eof
+                debug "Client closed connection, terminating BIND"
+                con.close
+                return
+              end
+            when con
+              accept = con.accept
+              #con.close
+          end
+        end
+      end
+    end
+
+    addr = accept.peeraddr
+    debug "Got connection from #{addr[2]}(#{addr[3]}):#{addr[1]}"
+    reply RSP_SUCCESS, CMD_BIND, ADDR_IP4, addr_strtoip4(addr[3]), addr[1]
+
+    selfrom = [client, accept]
+    while selfrom.length > 0
+      sel = IO.select(selfrom)
+      sel[0].each do |src|
+        dst = case s
+          when accept
+            client
+          when client
+            accept
+        end
+        debug "select on #{src.addr.inspect}"
+        data = src.recv(1024)
+        unless data == ""
+          dst.write data
+        else
+          debug "EOF on #{src.addr.inspect}"
+          src.close_read
+          dst.close_write
+          selfrom.delete src
+        end
+      end
+    end
+    debug "BIND finished"
   end
   def associate atyp, assoc_addr, assoc_port
     addr_proto = addr_pack assoc_addr, atyp, assoc_port
