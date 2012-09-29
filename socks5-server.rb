@@ -225,7 +225,7 @@ class Socks5
     debug("%s: %s:%s" % [debugmsg, addr_str(addr, atyp), port])
   end
   def connect atyp, addr, port
-    # connect a server port to a remote host port
+    # connect the client stream to a remote host port
     begin
       con = TCPSocket.new(addr_str(addr, atyp), port)
     rescue Exception => e
