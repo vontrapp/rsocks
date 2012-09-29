@@ -212,6 +212,16 @@ class Socks5
       when RSP_NOADDRTYPE
         "Address type not supported"
     end
+    case cmd
+      when CMD_CONNECT
+        debugmsg << " CONNECT"
+      when CMD_BIND
+        debugmsg << " BIND"
+      when CMD_ASSOCIATE
+        debugmsg << " ASSOCIATE"
+      when CMD_UDPBIND
+        debugmsg << " UDPBIND"
+    end
     debug("%s: %s:%s" % [debugmsg, addr_str(addr, atyp), port])
   end
   def connect atyp, addr, port
