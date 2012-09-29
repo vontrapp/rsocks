@@ -330,7 +330,7 @@ class Socks5
                 snd = [rsv,frag].pack("nC")
                 snd << addr_pack(addr, atyp, port)
                 snd << msg
-                assoc.send snd, 0, addr_str, assoc_port
+                assoc.send snd, 0, assoc_dstaddr, assoc_dstport
               else
                 debug "Not sending because association not complete"
               end
